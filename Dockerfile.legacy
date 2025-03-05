@@ -1,0 +1,26 @@
+# Legacy mode deployment
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy built app
+COPY dist ./dist
+COPY package.json ./
+COPY src/server ./src/server
+COPY .env.staging ./
+
+# Install dependencies
+RUN npm install --omit=dev
+RUN npm install ts-node
+
+# Environment variables
+ENV PORT=8080
+ENV NODE_ENV=production
+ENV VITE_MODE=staging
+ENV DISABLE_HYBRID=true
+
+# Expose port
+EXPOSE 8080
+
+# Start the server
+CMD ["node", "--loader", "ts-node/esm", "src/server/index.ts"]

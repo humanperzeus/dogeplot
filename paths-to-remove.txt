@@ -1,0 +1,12 @@
+.env
+.env.development
+.env.development.proxy
+.env.production
+.env.production.proxy
+.env.production.noproxy
+.env.staging
+.env.staging.proxy
+auto-sync/terraform/terraform.tfstate
+auto-sync/terraform/terraform.tfstate.backup
+auto-sync/terraform/production.tfvars
+auto-sync/terraform/staging.tfvars

@@ -1,0 +1,553 @@
+{
+  "version": 4,
+  "terraform_version": "1.5.7",
+  "serial": 111,
+  "lineage": "7c04f625-0a17-b218-929b-1cbc4f62cd3a",
+  "outputs": {},
+  "resources": [
+    {
+      "mode": "data",
+      "type": "google_service_account",
+      "name": "sync_service_account",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "account_id": "bills-sync-staging",
+            "display_name": "Bills Sync Service Account (staging)",
+            "email": "bills-sync-staging@dogeplotfun.iam.gserviceaccount.com",
+            "id": "projects/dogeplotfun/serviceAccounts/bills-sync-staging@dogeplotfun.iam.gserviceaccount.com",
+            "member": "[REMOVED].gserviceaccount.com",
+            "name": "projects/dogeplotfun/serviceAccounts/bills-sync-staging@dogeplotfun.iam.gserviceaccount.com",
+            "project": "dogeplotfun",
+            "unique_id": "103779200073924644561"
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "google_cloud_scheduler_job",
+      "name": "bills_sync_job",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "app_engine_http_target": [],
+            "attempt_deadline": "320s",
+            "description": "Triggers bills sync job every day",
+            "http_target": [
+              {
+                "body": "eyJuYW1lIjoiYmlsbHMtc3luYy1zdGFnaW5nLTIwMjUwMzAzMTgxMDA3In0=",
+                "headers": null,
+                "http_method": "POST",
+                "oauth_token": [
+                  {
+                    "scope": "https://www.googleapis.com/auth/cloud-platform",
+                    "service_account_email": "bills-sync-staging@dogeplotfun.iam.gserviceaccount.com"
+                  }
+                ],
+                "oidc_token": [],
+                "uri": "https://compute.googleapis.com/compute/v1/projects/dogeplotfun/zones/asia-southeast1-a/instances?sourceInstanceTemplate=projects/dogeplotfun/global/instanceTemplates/bills-sync-staging-template"
+              }
+            ],
+            "id": "projects/dogeplotfun/locations/asia-southeast1/jobs/bills-sync-staging-job",
+            "name": "bills-sync-staging-job",
+            "paused": false,
+            "project": "dogeplotfun",
+            "pubsub_target": [],
+            "region": "asia-southeast1",
+            "retry_config": [],
+            "schedule": "0 13 * * *",
+            "state": "ENABLED",
+            "time_zone": "UTC",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "data.google_service_account.sync_service_account"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "google_compute_instance_template",
+      "name": "sync_instance_template",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "advanced_machine_features": [],
+            "can_ip_forward": false,
+            "confidential_instance_config": null,
+            "description": "Template for bills sync VM instances",
+            "disk": [
+              {
+                "auto_delete": true,
+                "boot": true,
+                "device_name": "persistent-disk-0",
+                "disk_encryption_key": [],
+                "disk_name": "",
+                "disk_size_gb": 20,
+                "disk_type": "pd-standard",
+                "interface": "SCSI",
+                "labels": null,
+                "mode": "READ_WRITE",
+                "provisioned_iops": 0,
+                "resource_policies": null,
+                "source": "",
+                "source_image": "projects/debian-cloud/global/images/family/debian-11",
+                "source_image_encryption_key": [],
+                "source_snapshot": "",
+                "source_snapshot_encryption_key": [],
+                "type": "PERSISTENT"
+              }
+            ],
+            "guest_accelerator": [],
+            "id": "projects/dogeplotfun/global/instanceTemplates/bills-sync-staging-template",
+            "instance_description": "",
+            "labels": null,
+            "machine_type": "e2-standard-2",
+            "metadata": {
+              "congress_api_key": "VAieTUArSF3sDYWxx8HATciim9cUFvi5erbbwYml",
+              "environment": "staging",
+              "source_supabase_key": "[REMOVED]",
+              "source_supabase_url": "https://mawhqlpoqmirbijrcrrb.supabase.co"
+            },
+            "metadata_fingerprint": "BUuTUM7Ci5k=",
+            "metadata_startup_script": "#!/bin/bash\n\n# Enable exit on error and command trace\nset -e\nexec \u003e \u003e(tee /var/log/bills-sync-startup.log) 2\u003e\u00261\necho \"=============== STARTUP SCRIPT STARTED at $(date) ===============\"\n\n# Log start time \necho \"Starting bills sync script at $(date)\"\necho \"Environment: staging\"\necho \"Bucket: dogeplotfun-sync-scripts-staging\"\n\n# Install Node.js and npm\necho \"Installing Node.js and npm...\"\ncurl -fsSL https://deb.nodesource.com/setup_18.x | bash -\napt-get update\napt-get install -y nodejs\n\n# Verify Node.js and npm versions\nnode --version\nnpm --version\n\n# Install TypeScript and related tools globally\necho \"Installing TypeScript and related tools globally...\"\nnpm install -g typescript ts-node tsx\n\n# Create working directory\nmkdir -p /opt/bills-sync\ncd /opt/bills-sync\n\n# Download scripts and config files from GCS\necho \"Downloading scripts from storage bucket...\"\ngsutil cp gs://dogeplotfun-sync-scripts-staging/syncBillsParallel.ts .\ngsutil cp gs://dogeplotfun-sync-scripts-staging/loadEnv.ts .\ngsutil cp gs://dogeplotfun-sync-scripts-staging/tsconfig.json .\n\n# List the downloaded files\necho \"Downloaded files:\"\nls -la\n\n# Create package.json with proper ESM configuration\necho \"Creating package.json with ESM support...\"\ncat \u003e package.json \u003c\u003c EOL\n{\n  \"name\": \"bills-sync\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Bills synchronization script\",\n  \"type\": \"module\",\n  \"main\": \"syncBillsParallel.ts\",\n  \"scripts\": {\n    \"start\": \"tsx syncBillsParallel.ts\"\n  }\n}\nEOL\n\n# Install dependencies\necho \"Installing required dependencies...\"\nnpm install @supabase/supabase-js dotenv axios uuid pdf.js-extract filesize date-fns\nnpm install --save-dev @types/node @types/uuid tslib typescript tsx\n\n# Create .env.staging or .env.production file with required environment variables\necho \"Creating environment file for staging...\"\ncat \u003e .env.staging \u003c\u003c EOL\nVITE_SUPABASE_URL=https://mawhqlpoqmirbijrcrrb.supabase.co\nVITE_SUPABASE_ANON_KEY=your-anon-key\nSUPABASE_SERVICE_ROLE_KEY=[REMOVED]\nVITE_CONGRESS_API_KEY=VAieTUArSF3sDYWxx8HATciim9cUFvi5erbbwYml\nVITE_MODE=staging\nEOL\n\n# Create a basic .env file as well\ncat \u003e .env \u003c\u003c EOL\nVITE_SUPABASE_URL=https://mawhqlpoqmirbijrcrrb.supabase.co\nVITE_SUPABASE_ANON_KEY=your-anon-key\nSUPABASE_SERVICE_ROLE_KEY=[REMOVED]\nVITE_CONGRESS_API_KEY=VAieTUArSF3sDYWxx8HATciim9cUFvi5erbbwYml\nVITE_MODE=staging\nEOL\n\n# Check file contents\necho \"Environment files created:\"\necho \".env.staging:\"\ncat .env.staging\necho \".env:\"\ncat .env\n\n# Verify tsconfig.json\necho \"tsconfig.json content:\"\ncat tsconfig.json\n\n# Log start of sync\necho \"Starting bill synchronization with parameters: environment=staging, limit=100, threads=5, congress=119, offset=0\"\n\n# Run the sync script (with parallel processing) and redirect output to a log file\necho \"Executing sync script with tsx...\"\nnpx tsx syncBillsParallel.ts --staging --limit=100 --threads=5 --congress=119 --offset=0 2\u003e\u00261 | tee sync.log\n\n# Wait for script to complete and get exit code\nEXIT_CODE=$?\n\n# Log completion status\nif [ $EXIT_CODE -eq 0 ]; then\n  echo \"Bill sync completed successfully at $(date)\"\nelse\n  echo \"Bill sync failed with exit code $EXIT_CODE at $(date)\"\n  echo \"Last few lines of log:\"\n  tail -n 50 sync.log\nfi\n\n# Upload log file to the bucket for future reference\necho \"Uploading log file to GCS bucket...\"\ngsutil cp sync.log gs://dogeplotfun-sync-scripts-staging/logs/sync-$(date +%Y%m%d-%H%M%S).log\ngsutil cp /var/log/bills-sync-startup.log gs://dogeplotfun-sync-scripts-staging/logs/startup-$(date +%Y%m%d-%H%M%S).log\n\n# Display completion message\necho \"=============== STARTUP SCRIPT COMPLETED at $(date) ===============\"\n\n# Shutdown the instance\necho \"Shutting down instance...\"\nshutdown -h now ",
+            "min_cpu_platform": "",
+            "name": "bills-sync-staging-template",
+            "name_prefix": null,
+            "network_interface": [
+              {
+                "access_config": [
+                  {
+                    "nat_ip": "",
+                    "network_tier": "PREMIUM",
+                    "public_ptr_domain_name": ""
+                  }
+                ],
+                "alias_ip_range": [],
+                "internal_ipv6_prefix_length": 0,
+                "ipv6_access_config": [],
+                "ipv6_access_type": "",
+                "ipv6_address": "",
+                "name": "nic0",
+                "network": "https://www.googleapis.com/compute/v1/projects/dogeplotfun/global/networks/default",
+                "network_ip": "",
+                "nic_type": "",
+                "queue_count": 0,
+                "stack_type": "",
+                "subnetwork": "",
+                "subnetwork_project": ""
+              }
+            ],
+            "network_performance_config": [],
+            "project": "dogeplotfun",
+            "region": null,
+            "reservation_affinity": [],
+            "resource_policies": null,
+            "scheduling": [
+              {
+                "automatic_restart": true,
+                "instance_termination_action": "",
+                "local_ssd_recovery_timeout": [],
+                "min_node_cpus": 0,
+                "node_affinities": [],
+                "on_host_maintenance": "MIGRATE",
+                "preemptible": false,
+                "provisioning_model": "STANDARD"
+              }
+            ],
+            "self_link": "https://www.googleapis.com/compute/v1/projects/dogeplotfun/global/instanceTemplates/bills-sync-staging-template",
+            "self_link_unique": "https://www.googleapis.com/compute/v1/projects/dogeplotfun/global/instanceTemplates/bills-sync-staging-template?uniqueId=4567951537793945199",
+            "service_account": [
+              {
+                "email": "bills-sync-staging@dogeplotfun.iam.gserviceaccount.com",
+                "scopes": [
+                  "https://www.googleapis.com/auth/cloud-platform"
+                ]
+              }
+            ],
+            "shielded_instance_config": [],
+            "tags": null,
+            "tags_fingerprint": "",
+            "timeouts": null
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "metadata"
+              },
+              {
+                "type": "index",
+                "value": {
+                  "value": "congress_api_key",
+                  "type": "string"
+                }
+              }
+            ],
+            [
+              {
+                "type": "get_attr",
+                "value": "metadata"
+              },
+              {
+                "type": "index",
+                "value": {
+                  "value": "source_supabase_key",
+                  "type": "string"
+                }
+              }
+            ],
+            [
+              {
+                "type": "get_attr",
+                "value": "metadata"
+              },
+              {
+                "type": "index",
+                "value": {
+                  "value": "source_supabase_url",
+                  "type": "string"
+                }
+              }
+            ],
+            [
+              {
+                "type": "get_attr",
+                "value": "metadata_startup_script"
+              }
+            ]
+          ],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoyNDAwMDAwMDAwMDAsImRlbGV0ZSI6MjQwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0=",
+          "dependencies": [
+            "data.google_service_account.sync_service_account",
+            "google_storage_bucket.scripts_bucket"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "google_project_iam_binding",
+      "name": "compute_admin",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "condition": [],
+            "etag": "BwYvdBE5JQg=",
+            "id": "dogeplotfun/roles/compute.admin",
+            "members": [
+              "[REMOVED].gserviceaccount.com"
+            ],
+            "project": "dogeplotfun",
+            "role": "roles/compute.admin"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.google_service_account.sync_service_account"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "google_project_iam_binding",
+      "name": "service_account_user",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "condition": [],
+            "etag": "BwYvdBE5JQg=",
+            "id": "dogeplotfun/roles/iam.serviceAccountUser",
+            "members": [
+              "[REMOVED].gserviceaccount.com"
+            ],
+            "project": "dogeplotfun",
+            "role": "roles/iam.serviceAccountUser"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.google_service_account.sync_service_account"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "google_project_iam_binding",
+      "name": "storage_creator",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "condition": [],
+            "etag": "BwYvdBE5JQg=",
+            "id": "dogeplotfun/roles/storage.objectCreator",
+            "members": [
+              "[REMOVED].gserviceaccount.com"
+            ],
+            "project": "dogeplotfun",
+            "role": "roles/storage.objectCreator"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.google_service_account.sync_service_account"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "google_project_iam_binding",
+      "name": "storage_viewer",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "condition": [],
+            "etag": "BwYvdBE5JQg=",
+            "id": "dogeplotfun/roles/storage.objectViewer",
+            "members": [
+              "[REMOVED].gserviceaccount.com"
+            ],
+            "project": "dogeplotfun",
+            "role": "roles/storage.objectViewer"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.google_service_account.sync_service_account"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "google_storage_bucket",
+      "name": "scripts_bucket",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "autoclass": [],
+            "cors": [],
+            "custom_placement_config": [],
+            "default_event_based_hold": false,
+            "encryption": [],
+            "force_destroy": true,
+            "id": "dogeplotfun-sync-scripts-staging",
+            "labels": {},
+            "lifecycle_rule": [],
+            "location": "ASIA-SOUTHEAST1",
+            "logging": [],
+            "name": "dogeplotfun-sync-scripts-staging",
+            "project": "dogeplotfun",
+            "public_access_prevention": "inherited",
+            "requester_pays": false,
+            "retention_policy": [],
+            "self_link": "https://www.googleapis.com/storage/v1/b/dogeplotfun-sync-scripts-staging",
+            "soft_delete_policy": [
+              {
+                "effective_time": "2025-03-03T18:09:29.703Z",
+                "retention_duration_seconds": 604800
+              }
+            ],
+            "storage_class": "STANDARD",
+            "timeouts": null,
+            "uniform_bucket_level_access": true,
+            "url": "gs://dogeplotfun-sync-scripts-staging",
+            "versioning": [],
+            "website": []
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsInJlYWQiOjI0MDAwMDAwMDAwMCwidXBkYXRlIjoyNDAwMDAwMDAwMDB9fQ=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "google_storage_bucket_object",
+      "name": "load_env_script",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "bucket": "dogeplotfun-sync-scripts-staging",
+            "cache_control": "",
+            "content": null,
+            "content_disposition": "",
+            "content_encoding": "",
+            "content_language": "",
+            "content_type": "text/plain; charset=utf-8",
+            "crc32c": "sJVyiw==",
+            "customer_encryption": [],
+            "detect_md5hash": "DUfGbDBcUdZfHbBrxrag9w==",
+            "event_based_hold": false,
+            "id": "dogeplotfun-sync-scripts-staging-loadEnv.ts",
+            "kms_key_name": "",
+            "md5hash": "DUfGbDBcUdZfHbBrxrag9w==",
+            "media_link": "https://storage.googleapis.com/download/storage/v1/b/dogeplotfun-sync-scripts-staging/o/loadEnv.ts?generation=1741025373816089\u0026alt=media",
+            "metadata": {},
+            "name": "loadEnv.ts",
+            "output_name": "loadEnv.ts",
+            "self_link": "https://www.googleapis.com/storage/v1/b/dogeplotfun-sync-scripts-staging/o/loadEnv.ts",
+            "source": "./../../src/scripts/loadEnv.ts",
+            "storage_class": "STANDARD",
+            "temporary_hold": false,
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoyNDAwMDAwMDAwMDAsImRlbGV0ZSI6MjQwMDAwMDAwMDAwLCJ1cGRhdGUiOjI0MDAwMDAwMDAwMH19",
+          "dependencies": [
+            "google_storage_bucket.scripts_bucket"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "google_storage_bucket_object",
+      "name": "logs_folder",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "bucket": "dogeplotfun-sync-scripts-staging",
+            "cache_control": "",
+            "content": " ",
+            "content_disposition": "",
+            "content_encoding": "",
+            "content_language": "",
+            "content_type": "application/x-directory",
+            "crc32c": "csDdjw==",
+            "customer_encryption": [],
+            "detect_md5hash": "chXunH2dwinSkhpA6JnsXw==",
+            "event_based_hold": false,
+            "id": "dogeplotfun-sync-scripts-staging-logs/",
+            "kms_key_name": "",
+            "md5hash": "chXunH2dwinSkhpA6JnsXw==",
+            "media_link": "https://storage.googleapis.com/download/storage/v1/b/dogeplotfun-sync-scripts-staging/o/logs%2F?generation=1741025372211400\u0026alt=media",
+            "metadata": {},
+            "name": "logs/",
+            "output_name": "logs/",
+            "self_link": "https://www.googleapis.com/storage/v1/b/dogeplotfun-sync-scripts-staging/o/logs%2F",
+            "source": null,
+            "storage_class": "STANDARD",
+            "temporary_hold": false,
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoyNDAwMDAwMDAwMDAsImRlbGV0ZSI6MjQwMDAwMDAwMDAwLCJ1cGRhdGUiOjI0MDAwMDAwMDAwMH19",
+          "dependencies": [
+            "google_storage_bucket.scripts_bucket"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "google_storage_bucket_object",
+      "name": "sync_script",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "bucket": "dogeplotfun-sync-scripts-staging",
+            "cache_control": "",
+            "content": null,
+            "content_disposition": "",
+            "content_encoding": "",
+            "content_language": "",
+            "content_type": "text/plain; charset=utf-8",
+            "crc32c": "fj7ldg==",
+            "customer_encryption": [],
+            "detect_md5hash": "+4PVrKI9ywobA/bz/Yb1zw==",
+            "event_based_hold": false,
+            "id": "dogeplotfun-sync-scripts-staging-syncBillsParallel.ts",
+            "kms_key_name": "",
+            "md5hash": "+4PVrKI9ywobA/bz/Yb1zw==",
+            "media_link": "https://storage.googleapis.com/download/storage/v1/b/dogeplotfun-sync-scripts-staging/o/syncBillsParallel.ts?generation=1741025374111753\u0026alt=media",
+            "metadata": {},
+            "name": "syncBillsParallel.ts",
+            "output_name": "syncBillsParallel.ts",
+            "self_link": "https://www.googleapis.com/storage/v1/b/dogeplotfun-sync-scripts-staging/o/syncBillsParallel.ts",
+            "source": "./../../src/scripts/syncBillsParallel.ts",
+            "storage_class": "STANDARD",
+            "temporary_hold": false,
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoyNDAwMDAwMDAwMDAsImRlbGV0ZSI6MjQwMDAwMDAwMDAwLCJ1cGRhdGUiOjI0MDAwMDAwMDAwMH19",
+          "dependencies": [
+            "google_storage_bucket.scripts_bucket"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "google_storage_bucket_object",
+      "name": "tsconfig_cloud_json",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "bucket": "dogeplotfun-sync-scripts-staging",
+            "cache_control": "",
+            "content": null,
+            "content_disposition": "",
+            "content_encoding": "",
+            "content_language": "",
+            "content_type": "text/plain; charset=utf-8",
+            "crc32c": "IYB+QQ==",
+            "customer_encryption": [],
+            "detect_md5hash": "DroWVMeE4hdZqEbyBTt1jw==",
+            "event_based_hold": false,
+            "id": "dogeplotfun-sync-scripts-staging-tsconfig.json",
+            "kms_key_name": "",
+            "md5hash": "DroWVMeE4hdZqEbyBTt1jw==",
+            "media_link": "https://storage.googleapis.com/download/storage/v1/b/dogeplotfun-sync-scripts-staging/o/tsconfig.json?generation=1741025373712257\u0026alt=media",
+            "metadata": {},
+            "name": "tsconfig.json",
+            "output_name": "tsconfig.json",
+            "self_link": "https://www.googleapis.com/storage/v1/b/dogeplotfun-sync-scripts-staging/o/tsconfig.json",
+            "source": "./tsconfig.cloud.json",
+            "storage_class": "STANDARD",
+            "temporary_hold": false,
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoyNDAwMDAwMDAwMDAsImRlbGV0ZSI6MjQwMDAwMDAwMDAwLCJ1cGRhdGUiOjI0MDAwMDAwMDAwMH19",
+          "dependencies": [
+            "google_storage_bucket.scripts_bucket"
+          ]
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}

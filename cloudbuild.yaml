@@ -1,0 +1,30 @@
+
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/dogeplotfun/dogeplot-prod', '.']
+  
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/dogeplotfun/dogeplot-prod']
+  
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'dogeplot-prod'
+      - '--image=gcr.io/dogeplotfun/dogeplot-prod'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--memory=2Gi'
+      - '--cpu=1'
+      - '--concurrency=80'
+      - '--timeout=300s'
+      - '--min-instances=0'
+      - '--max-instances=10'
+      - '--allow-unauthenticated'
+
+images:
+  - 'gcr.io/dogeplotfun/dogeplot-prod'
