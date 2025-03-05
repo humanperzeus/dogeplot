@@ -687,9 +687,9 @@ async function main() {
     console.log('\n');
     
     // Calculate total cost
-    const total[REMOVED] = billsToProcess.reduce((total, bill) => {
+    const totalTokens = billsToProcess.reduce((total, bill) => {
       if (bill.full_text) {
-        return total + (bill.full_text.length / 4); // Rough estimate of [REMOVED]
+        return total + (bill.full_text.length / 4); // Rough estimate of tokens
       }
       return total;
     }, 0);
@@ -701,13 +701,13 @@ async function main() {
     console.log(`Failed: ${stats.failed}`);
     console.log(`Provider: ${options.provider.toUpperCase()}`);
     console.log(`Embedding Model: ${options.provider === 'openai' ? OPENAI_EMBEDDING_MODEL : GEMINI_EMBEDDING_MODEL}`);
-    console.log(`Estimated Total [REMOVED]: ${Math.round(total[REMOVED]).toLocaleString()}`);
+    console.log(`Estimated Total Tokens: ${Math.round(totalTokens).toLocaleString()}`);
     
     // Estimate cost based on provider
     if (options.provider === 'openai') {
-      console.log(`Approximate Cost: $${(total[REMOVED] / 1000 * 0.0001).toFixed(4)}`);
+      console.log(`Approximate Cost: $${(totalTokens / 1000 * 0.0001).toFixed(4)}`);
     } else { // gemini
-      console.log(`Approximate Cost: $${(total[REMOVED] / 1000 * 0.00002).toFixed(4)}`); // Lower cost for Gemini
+      console.log(`Approximate Cost: $${(totalTokens / 1000 * 0.00002).toFixed(4)}`); // Lower cost for Gemini
     }
     
     // Get final counts to confirm progress

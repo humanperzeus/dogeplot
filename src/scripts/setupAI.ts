@@ -31,8 +31,8 @@ async function main() {
         provider: 'OpenAI',
         model_id: 'openai/gpt-4o-mini',
         is_active: true,
-        cost_per_1k_[REMOVED]: 0.0002,
-        max_[REMOVED]: 4096
+        cost_per_1k_tokens: 0.0002,
+        max_tokens: 4096
       })
       .select()
       .single();
