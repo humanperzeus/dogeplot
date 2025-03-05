@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Check for environment argument
+if [ "$1" != "staging" ] && [ "$1" != "production" ]; then
+    echo "❌ Please specify environment: staging or production"
+    echo "Usage: npm run deploy staging|production"
+    exit 1
+fi
+
 # Store current date for backup naming
 DATE=$(date '+%Y%m%d_%H%M%S')
 
@@ -60,9 +67,13 @@ EOL
 
 echo "✅ Created deployment-safe .gitignore"
 
-# 3. Run deployment
-echo "🚀 Running deployment..."
-npm run deploy:cloud:prod
+# 3. Run deployment based on environment
+echo "🚀 Running $1 deployment..."
+if [ "$1" = "staging" ]; then
+    npm run deploy:cloud:staging
+else
+    npm run deploy:cloud:prod
+fi
 
 # 4. Restore original .gitignore
 if [ -f .gitignore.backup.$DATE ]; then
@@ -70,4 +81,4 @@ if [ -f .gitignore.backup.$DATE ]; then
     echo "✅ Restored original .gitignore"
 fi
 
-echo "✨ Deployment complete!" 
+echo "✨ $1 deployment complete!" 

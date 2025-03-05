@@ -99,7 +99,9 @@
     "test:embeddings": "tsx src/scripts/testEmbeddingMethods.ts",
     "test:embeddings:staging": "tsx src/scripts/testEmbeddingMethods.ts --staging",
     "test:embeddings:prod": "tsx src/scripts/testEmbeddingMethods.ts --production",
-    "deploy": "./deploy.sh"
+    "deploy": "echo '❌ Please use: npm run deploy:staging or npm run deploy:production'",
+    "deploy:staging": "./deploy.sh staging",
+    "deploy:production": "./deploy.sh production"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.15.2",

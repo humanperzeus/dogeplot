@@ -79,6 +79,35 @@ graph TD
     F -->|Production| H[Inngest Cloud]
 ```
 
+## 🚀 Version 1.0.3 Updates
+
+### New Features
+
+#### Enhanced Semantic Search
+- **Button-Triggered Search**: Semantic search now requires explicit button activation for better user control
+- **Improved Results Display**: Search results show complete bill information with proper formatting
+- **Real-Time Result Count**: "Bills analyzed" count updates instantly after search completion
+- **Similarity Badges**: Visual indicators showing how closely each bill matches your search query
+- **Threshold Control**: Adjustable similarity threshold to fine-tune search precision
+
+#### Deployment Architecture
+- **Separated Server Deployment**: Frontend and backend now deployed separately for better scaling
+- **Improved Error Handling**: Better handling of null/undefined values in search results
+- **Crash Prevention**: Enhanced stability for handling large numbers of concurrent requests
+- **Port Conflict Management**: New restart script to manage server port conflicts
+
+### Technical Improvements
+- **State Management**: Added force re-render mechanisms for immediate UI updates
+- **Type Safety**: Improved TypeScript typing for semantic search results
+- **Error Recovery**: Graceful error handling with clear user feedback
+- **Performance**: Optimized bill data fetching with complete information retrieval
+
+### How to Use Semantic Search
+1. Toggle the "Semantic Search" switch in the search bar
+2. Enter your search query (e.g., "bills about climate change")
+3. Click the "Search" button that appears
+4. View results sorted by relevance with similarity scores
+
 ## 🔄 Environment Setup
 
 The application supports multiple environments with different configuration files:
@@ -101,6 +130,82 @@ The application supports multiple environments with different configuration file
 - `OPENROUTER_API_KEY`: OpenRouter API key
 - `VITE_API_URL`: API endpoint (set for proxy modes)
 - `BILL_LIMIT`: Maximum bills to fetch per sync (default: 25)
+- `PROCESSOR_TYPE`: Processing mode (`google-cloud`, `inngest`, or `legacy`)
+
+### Setup Process
+
+1. Copy `.env.example
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit with proper credentials
+   ```
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_OPENROUTER_API_KEY=your_openrouter_api_key
+   VITE_CONGRESS_API_KEY=your_congress_api_key
+   ```
+
+3. Run development server
+   ```bash
+   npm run dev
+   # OR with API proxy
+   npm run dev:proxy
+   ```
+
+### Available Commands
+
+#### Development
+```bash
+# Standard development
+npm run dev
+
+# With API proxy for PDF handling
+npm run dev:proxy
+
+# Menu system for all commands
+npm run menu
+```
+
+#### Building
+```bash
+# Production build
+npm run build:production
+
+# Staging build
+npm run build:staging
+```
+
+#### Deployment
+```bash
+# Deploy frontend
+npm run build:production
+# Then deploy to your hosting platform
+
+# Deploy backend
+npm run deploy:cloud:prod
+```
+
+### Running Locally with Different Processing Modes
+
+Use our menu system for the easiest setup:
+
+```bash
+npm run menu
+# Select option 8 for Server Operations
+```
+
+Or run specific commands:
+
+```bash
+# Run with Google Cloud processing (default)
+npm run server:staging
+
+# Run with Inngest processing (high scale)
+npm run server:staging:inngest  # In terminal 1
+npm run inngest:dev             # In terminal 2
+```
 
 ## 💾 Database Schema
 
@@ -474,117 +579,421 @@ graph TD
     F --> G[Custom Domain]
 ```
 
-## 🔧 Common Operations
+### Separated Deployment Architecture
 
-### Setting Up Development Environment
+DOGEPLOT uses a separated deployment architecture for improved scalability and reliability:
 
-```bash
-# Install dependencies
-npm install
+#### Frontend Deployment
+- **Platform**: Vercel or similar static hosting
+- **Build Process**: `npm run build:production`
+- **Deployment Frequency**: On feature completion
+- **Scaling**: Automatic CDN-based scaling
 
-# Setup environment variables
-cp .env.sample .env
-# Edit .env with your credentials
+#### Backend Deployment
+- **Platform**: Google Cloud Run
+- **Build Process**: `npm run deploy:cloud:prod`
+- **Deployment Frequency**: As needed for API changes
+- **Scaling**: Auto-scaling based on request load
+- **Resource Allocation**: Configurable CPU and memory
 
-# Start development server
-npm run dev
-# or with proxy
-npm run dev:proxy
+#### Communication Flow
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant Database
+    
+    User->>Frontend: Access application
+    Frontend->>Backend: API requests
+    Backend->>Database: Query data
+    Database->>Backend: Return results
+    Backend->>Frontend: Process and return data
+    Frontend->>User: Display results
 ```
 
-### Syncing Bills from Congress.gov
+#### Benefits of Separated Deployment
+1. **Independent Scaling**: Frontend and backend can scale independently
+2. **Reduced Downtime**: Updates to one component don't affect the other
+3. **Optimized Resources**: Backend resources allocated only when needed
+4. **Improved Security**: Backend services not directly exposed to users
+5. **Better Monitoring**: Separate monitoring for each component
 
-```bash
-# Using the menu system (recommended)
-npm run menu
-# Select option for bill sync
+## 🔍 Semantic Search Implementation
 
-# Direct script execution
-npm run sync:bills:congressapi
-# or for production
-npm run sync:bills:congressapi:prod
+### Architecture Overview
+
+```mermaid
+graph TD
+    A[User Query] --> B[SearchBar Component]
+    B --> C{Is Semantic Mode?}
+    C -->|No| D[Regular Keyword Search]
+    C -->|Yes| E[Semantic Search Button]
+    E --> F[API Request]
+    F --> G[Vector Similarity Search]
+    G --> H[Bill ID Extraction]
+    H --> I[Complete Bill Data Fetch]
+    I --> J[Merge with Similarity Scores]
+    J --> K[Sort by Relevance]
+    K --> L[Display Results]
+    L --> M[Update Bill Count]
 ```
 
-### Database Management
+### Technical Implementation
+
+1. **Vector Embeddings**:
+   - Bill text is converted to vector embeddings during synchronization
+   - Uses advanced embedding models for semantic understanding
+   - Stored in a vector-enabled database for efficient similarity search
+
+2. **Search Process**:
+   ```typescript
+   // Two-step search process
+   const performSemanticSearch = async (query, threshold) => {
+     // Step 1: Get semantic matches with similarity scores
+     const semanticResults = await semanticSearchBillsByText({
+       query, threshold, limit: 50
+     });
+     
+     // Step 2: Extract bill IDs and fetch complete data
+     const billIds = semanticResults.map(bill => bill.id);
+     const { bills: completeBills } = await fetchBills({
+       billIds: billIds
+     });
+     
+     // Step 3: Merge and sort by similarity
+     const processedResults = completeBills.map(bill => ({
+       ...bill,
+       similarity: semanticResults.find(b => b.id === bill.id)?.similarity
+     })).sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
+     
+     // Update UI
+     setBills(processedResults);
+   };
+   ```
+
+3. **UI Components**:
+   - **Search Toggle**: Switch between keyword and semantic search
+   - **Threshold Slider**: Adjust similarity threshold (0.1-0.9)
+   - **Search Button**: Trigger semantic search only when ready
+   - **Similarity Badges**: Visual indicators of match relevance
+   - **Result Count**: Real-time display of found matches
+
+4. **Performance Optimizations**:
+   - Lazy loading of results
+   - Debounced search to prevent excessive API calls
+   - Force re-render mechanisms for immediate UI updates
+   - Caching of frequently accessed bills
+
+### User Experience Improvements
+
+1. **Explicit Search Triggering**:
+   - Search button only appears in semantic mode
+   - Prevents accidental heavy API calls
+   - Gives users control over when to execute search
+
+2. **Visual Feedback**:
+   - Loading indicators during search
+   - Match count updates instantly
+   - Similarity badges show relevance at a glance
+   - Clear "No results" messaging with helpful suggestions
+
+3. **Error Handling**:
+   - Graceful recovery from failed searches
+   - Clear error messages
+   - Option to switch to regular search
+   - Automatic threshold adjustment suggestions
+
+## 🔗 Vector Embeddings and Semantic Search
+
+### Overview
+
+The Bill Tracker includes vector embedding capabilities, allowing for semantic search and similarity detection between bills. This feature uses OpenAI embeddings and Supabase's pgvector extension to create a powerful semantic search engine.
+
+### 🔑 Key Components
+
+1. **Vector Embeddings Generation**
+   - Creates embeddings from bill text using OpenAI's text-embedding-3-small model
+   - Stores embeddings in Supabase using pgvector extension
+   - Configurable similarity thresholds and match counts per embedding
+   - Tracks embedding model and version information
+
+2. **Flexible Search Options**
+   - **Semantic Search**: Find bills related to natural language queries
+   - **Bill ID Search**: Find bills similar to a specific bill by UUID
+   - **Bill Number Search**: Find bills similar to a specific bill using common formats (e.g., "hr1234", "S. 123")
+   - **Parameter Control**: Adjust similarity thresholds, result limits, and filter by model/version
+
+3. **Bill Number Search**
+   - Supports multiple formats (e.g., "H.R. 1234", "hr1234", "S. 45")
+   - Automatically normalizes input by removing spaces and dots
+   - Maps common abbreviations to standard bill types
+   - Supports all bill types: HR, S, HJRES, SJRES, HCONRES, SCONRES, HRES, SRES
+
+## 🔄 Development Workflow and Best Practices
+
+### Commit Message Format
+We use standardized commit messages in the following format:
+```
+Feat(component): add new component
+Fix(api): fix api error
+Docs(readme): update readme
+Refactor(utils): refactor utils
+Style(tailwind): add new tailwind class
+Test(unit): add unit test
+Chore(deps): update dependencies
+```
+
+### ESLint Configuration
+For production applications, we recommend enabling type-aware lint rules:
+
+```js
+export default {
+  // other rules...
+  parserOptions: {
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+    project: ['./tsconfig.json', './tsconfig.node.json'],
+    tsconfigRootDir: __dirname,
+  },
+}
+```
+
+## 🔍 Troubleshooting & Common Issues
+
+### SSL and Domain Issues
+1. **Certificate Not Provisioning**
+   - Check DNS records are correct
+   - Verify Cloudflare proxy settings
+   - Ensure ACME challenge is accessible
+
+2. **Domain Not Resolving**
+   - Verify A/AAAA records
+   - Check DNS propagation
+   - Confirm Google Cloud mapping
+
+### Build and Deployment Issues
+```bash
+Problem: Build failing
+Solution:
+1. Check environment:
+   - Verify .env files
+   - Check VITE_MODE
+2. Clean and rebuild:
+   - npm run refresh
+   - npm run build
+```
+
+### Server Issues
+```bash
+Problem: Server port conflicts
+Solution:
+1. Check for running processes:
+   - lsof -i :3000
+2. Kill conflicting process:
+   - kill -9 [PID]
+3. Use restart script:
+   - npm run server:restart
+```
+
+## 📋 Project Structure
+
+```
+/
+├── src/
+│   ├── components/     # React components
+│   │   ├── ui/         # Base UI components
+│   │   ├── BillFeed.tsx # Main bill display
+│   │   └── ...
+│   ├── lib/            # Utilities and shared code
+│   ├── server/         # Express server for backend
+│   ├── scripts/        # CLI tools and utilities
+│   └── types/          # TypeScript type definitions
+├── public/             # Static assets
+└── dist/               # Build output
+```
+
+## 🌐 DOGEPLOT Domain Management System
+
+### Domain Management Overview
+
+The domain management system provides automated setup and configuration for custom domains using Google Cloud Run and Cloudflare. It handles both direct domain mapping and load balancer configurations.
+
+### 🔑 Key Components
+
+1. **Direct Domain Mapping**
+   - Single region deployment
+   - Managed SSL certificates
+   - Cloudflare integration
+   - Quick setup process
+
+2. **Load Balancer Setup**
+   - Global CDN and caching
+   - DDoS protection
+   - Multi-region support
+   - Edge SSL termination
+
+### 🛠️ System Architecture
+
+```mermaid
+graph TD
+    A[Domain Management Menu] --> B[Direct Mapping]
+    A --> C[Load Balancer]
+    A --> D[Auto-Fix Setup]
+    
+    B --> E[DNS Records]
+    B --> F[SSL Cert]
+    B --> G[Domain Mapping]
+    
+    C --> H[Serverless NEG]
+    C --> I[Backend Service]
+    C --> J[URL Mapping]
+    
+    D --> K[Cloudflare Config]
+    D --> L[Google Cloud Setup]
+    D --> M[Status Monitor]
+```
+
+### 📋 Common Issues and Solutions
+
+1. **SSL Certificate Issues**
+   ```bash
+   Root Cause: Cloudflare proxy interfering with certificate validation
+   Solution:
+   - Disable Cloudflare Universal SSL
+   - Set ACME challenge records to DNS-only
+   - Use Full (strict) mode in Cloudflare
+   ```
+
+2. **Domain Verification Problems**
+   ```bash
+   Root Cause: DNS propagation or incorrect records
+   Solution:
+   - Ensure correct A/AAAA records
+   - Set up verification TXT record
+   - Wait for DNS propagation (5-10 minutes)
+   ```
+
+3. **Certificate Provisioning Delays**
+   ```bash
+   Root Cause: Google Cloud certificate provisioning time
+   Solution:
+   - Wait 15-30 minutes for provisioning
+   - Monitor status with built-in tools
+   - Verify DNS records are correct
+   ```
+
+## 🔧 Security and Permissions
+
+DOGEPLOT implements Row Level Security (RLS) and proper access policies:
+
+```sql
+-- Enable RLS on all tables
+ALTER TABLE bills ENABLE ROW LEVEL SECURITY;
+
+-- Allow public read access
+CREATE POLICY "Enable read access for all users on bills"
+ON bills FOR SELECT TO public USING (true);
+
+-- Allow full access for service role
+CREATE POLICY "Enable full access for service role on bills"
+ON bills FOR ALL TO service_role
+USING (true) WITH CHECK (true);
+```
+
+## 📊 Database Structure and Migrations
+
+### 📊 Database Schema
+
+```mermaid
+graph TD
+    Bills[Bills Table] --> BA[Bill Analyses]
+    AIM[AI Models] --> BA
+    AIP[AI Prompts] --> BA
+    Bills --> FB[Failed Bills]
+```
+
+### Database Migrations
+
+DOGEPLOT provides tools for database management including new database setup and updates:
 
 ```bash
-# Reset database to clean state
-npm run db:reset
-
-# Create new database structure
+# Complete reset and new setup
 npm run db:new
 
-# Update existing database
+# Apply updates to existing database
 npm run db:update
+
+# From menu system
+npm run menu
+# Select option 4 for Database Management
 ```
 
-### Building for Production
+## 🧩 Frontend Architecture
 
-```bash
-# Standard production build
-npm run build:production
+### Tech Stack
 
-# With proxy configuration
-npm run build:production.proxy
-```
+- **React 18**: Component-based UI with hooks for state management
+- **TypeScript**: Type-safe code with Supabase type generation
+- **Vite**: Fast build tool with HMR and efficient bundling
+- **React Router**: Declarative routing with nested routes
+- **Tailwind CSS**: Utility-first CSS framework for styling
+- **Radix UI**: Accessible UI primitives for components
+- **Supabase Client**: Direct database access from the frontend
+- **OpenAI Integration**: API for bill analysis and embeddings
 
-## 🛠️ Troubleshooting
+### State Management
 
-### Auto-Sync Issues
+The application uses React's built-in state management:
+- Component state with `useState`
+- Context API with `useContext` (e.g., theme provider)
+- Props passing for component communication
+- Direct Supabase queries for data management
 
-The auto-sync system is currently not functioning correctly. Based on analysis, the key issues include:
+### Styling System
 
-1. **Incorrect Script Reference**:
-   - Current implementation tries to use sync.js which is not the main sync tool
-   - Should be using syncBillsParallel.ts which is used in the CLI menu
+- **Tailwind CSS**: Utility classes with custom configuration
+- **Custom Components**: Shadcn-style components built on Radix UI
+- **Dark Mode**: Fully supported with theme switching
+- **Custom Utilities**: Special components like glass panels and gradients
+- **Responsive Design**: Mobile-first approach with breakpoints
 
-2. **Dependencies Missing**:
-   - The cloud startup script is missing necessary dependencies for TypeScript
-   - Needs ts-node and other dependencies installed
+### Key Components
 
-3. **Environment Variables Mismatch**:
-   - The auto-sync script expects different environment variables than provided
-   - Need to align environment variable names with syncBillsParallel.ts requirements
+1. **BillFeed**: 
+   - Displays list of bills with filtering options
+   - Infinite scrolling for loading more bills
+   - Integration with search functionality
 
-4. **Script Location Issues**:
-   - The script should be pulling from the correct GCS bucket location
-   - Need to ensure the syncBillsParallel.ts file is properly uploaded to GCS
+2. **BillDialog**:
+   - Detailed view of selected bill
+   - Shows bill text, status, and AI analysis
+   - Progress tracking and timeline visualization
 
-To fix these issues:
-1. Update the startup-script.sh to use syncBillsParallel.ts instead of sync.js
-2. Install all necessary dependencies (including TypeScript and ts-node)
-3. Correctly configure environment variables for syncBillsParallel.ts
-4. Upload the syncBillsParallel.ts file to the GCS bucket
-5. Ensure the Cloud Scheduler job properly creates the VM instance
+3. **SearchBar**:
+   - Text search with suggestions
+   - Vector-based semantic search capability
+   - Filtering options by date, status, and bill type
 
-### Database Sync Problems
+4. **Header**:
+   - Navigation controls
+   - Environment indicator
+   - Theme switching controls
 
-If bills are not syncing correctly:
+### Environment Configurations
 
-1. Check Congress.gov API status
-2. Verify API keys are valid
-3. Examine error logs in the database
-4. Try running with `--force` flag
+The application supports multiple environments:
+- **Development**: Local development setup
+- **Staging**: Testing environment with staging database
+- **Production**: Live production environment
+- **Proxy Variants**: For each environment with API proxy
 
-### SSL Certificate Issues
+## 🔗 Additional Resources
 
-When setting up custom domains:
-
-1. **Certificate Not Provisioning**:
-   - Ensure DNS records are correctly set
-   - Verify ACME challenge record is DNS-only
-   - Wait 15-30 minutes for provisioning
-
-2. **Domain Not Resolving**:
-   - Check A/AAAA records
-   - Verify Cloudflare proxy settings
-   - Confirm Google Cloud domain mapping status
-
-## 📚 External Resources
-
-- [Congress.gov API Documentation](https://api.congress.gov/docs/)
+- [Congress.gov API Documentation](https://api.congress.gov/)
 - [Supabase Documentation](https://supabase.io/docs)
-- [OpenRouter API Documentation](https://openrouter.ai/docs)
+- [Vector Embeddings Guide](https://supabase.com/docs/guides/ai/vector-embeddings)
+- [OpenRouter API](https://openrouter.ai/docs)
 - [Google Cloud Run Documentation](https://cloud.google.com/run/docs)
 - [Terraform Documentation](https://www.terraform.io/docs)
 
@@ -642,597 +1051,3 @@ terraform apply -var-file=production.tfvars
 ```
 
 The environment-specific variables are stored in `staging.tfvars` and `production.tfvars` files, which include project ID, region, zone, Supabase credentials, Congress API key, and the synchronization schedule.
-
-# Vector Embeddings and Semantic Search
-
-## Overview
-
-The Bill Tracker includes vector embedding capabilities, allowing for semantic search and similarity detection between bills. This feature uses OpenAI embeddings and Supabase's pgvector extension to create a powerful semantic search engine.
-
-## 🔑 Key Components
-
-1. **Vector Embeddings Generation**
-   - Creates embeddings from bill text using OpenAI's text-embedding-3-small model
-   - Stores embeddings in Supabase using pgvector extension
-   - Configurable similarity thresholds and match counts per embedding
-   - Tracks embedding model and version information
-
-2. **Flexible Search Options**
-   - **Semantic Search**: Find bills related to natural language queries
-   - **Bill ID Search**: Find bills similar to a specific bill by UUID
-   - **Bill Number Search**: Find bills similar to a specific bill using common formats (e.g., "hr1234", "S. 123")
-   - **Parameter Control**: Adjust similarity thresholds, result limits, and filter by model/version
-
-3. **Bill Number Search**
-   - Supports multiple formats (e.g., "H.R. 1234", "hr1234", "S. 45")
-   - Automatically normalizes input by removing spaces and dots
-   - Maps common abbreviations to standard bill types
-   - Supports all bill types: HR, S, HJRES, SJRES, HCONRES, SCONRES, HRES, SRES
-
-## 🛠️ Usage Examples
-
-1. **Command Line Usage**
-
-   ```bash
-   # Search by natural language query
-   npx tsx src/scripts/searchVectorEmbeddings.ts --staging --query "climate change" --threshold 0.5
-   
-   # Search by bill UUID
-   npx tsx src/scripts/searchVectorEmbeddings.ts --staging --similar "uuid-of-bill" --threshold 0.7
-   
-   # Search by bill number (flexible format)
-   npx tsx src/scripts/searchVectorEmbeddings.ts --staging --bill "hr1234" --threshold 0.7
-   npx tsx src/scripts/searchVectorEmbeddings.ts --staging --bill "H.R. 1234" --threshold 0.7
-   npx tsx src/scripts/searchVectorEmbeddings.ts --staging --bill "s.123" --threshold 0.7
-   
-   # Filter by model and version
-   npx tsx src/scripts/searchVectorEmbeddings.ts --staging --query "education" --modelFilter "text-embedding-3-small" --versionFilter 1
-   ```
-
-2. **Interactive Menu Usage**
-
-   ```bash
-   # Start the CLI menu
-   npm run menu
-   
-   # For semantic search:
-   # Select option 8e for "Semantic Search"
-   # Choose option 1 for topic search or option 2 for bill number search
-   
-   # For finding similar bills:
-   # Select option 8f for "Find Similar Bills"
-   # Choose option 1 for UUID search or option 2 for bill number search
-   ```
-
-## 🔍 Technical Implementation
-
-1. **Database Structure**
-
-   ```sql
-   CREATE TABLE bill_embeddings (
-       id UUID PRIMARY KEY REFERENCES bills(id) ON DELETE CASCADE,
-       embedding vector(1536),
-       query_embedding vector(1536),
-       similarity_threshold FLOAT DEFAULT 0.7,
-       match_count INTEGER DEFAULT 5,
-       embedding_model VARCHAR NOT NULL,
-       embedding_version INTEGER NOT NULL DEFAULT 1,
-       text_processed TEXT,
-       created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()),
-       updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
-   );
-   ```
-
-2. **Search Functions**
-
-   ```sql
-   -- Semantic search function
-   CREATE OR REPLACE FUNCTION search_bills_by_embedding(
-       input_embedding vector(1536),
-       input_match_threshold float DEFAULT 0.7,
-       input_match_count int DEFAULT 5,
-       input_model_filter varchar DEFAULT NULL,
-       input_version_filter int DEFAULT NULL
-   )
-   RETURNS TABLE (
-       id UUID,
-       bill_number VARCHAR,
-       congress VARCHAR,
-       title TEXT,
-       similarity float,
-       embedding_model VARCHAR,
-       embedding_version INTEGER
-   );
-   
-   -- Similar bill search function
-   CREATE OR REPLACE FUNCTION find_similar_bills(
-       input_bill_id UUID,
-       input_match_count int DEFAULT NULL,
-       input_match_threshold float DEFAULT NULL,
-       input_model_filter varchar DEFAULT NULL,
-       input_version_filter int DEFAULT NULL
-   )
-   RETURNS TABLE (
-       id UUID,
-       bill_number VARCHAR,
-       congress VARCHAR,
-       title TEXT,
-       similarity float,
-       embedding_model VARCHAR,
-       embedding_version INTEGER
-   );
-   ```
-
-3. **Bill Number Normalization Logic**
-
-   The bill number search feature implements a sophisticated normalization function that:
-   
-   - Converts input to lowercase and removes whitespace
-   - Removes dots and other separators
-   - Extracts bill type and number using regex
-   - Maps common abbreviations to standard database values
-   - Provides helpful error messages for invalid formats
-   - Looks up the bill UUID in the database before performing similarity search
-
-## 📋 Best Practices
-
-1. **Similarity Thresholds**
-   - Use higher thresholds (0.7-0.9) when finding similar bills by bill ID
-   - Use lower thresholds (0.3-0.5) for more general text searches
-   - Start with a threshold of 0.5 and adjust as needed for precision
-
-2. **Bill Number Format Handling**
-   - The system handles a wide variety of formats automatically
-   - When typing bill numbers manually, any of these formats work:
-     - Formal: "H.R. 1234", "S. 123", "H.J.Res. 45"
-     - Abbreviated: "HR1234", "S123", "HJRES45"
-     - Mixed case: "Hr1234", "s123", "HJres45"
-
-3. **Performance Considerations**
-   - Vector searches perform best with indexes (automatically created)
-   - Large result sets (>20) may impact performance
-   - For best performance, filter by model and version when possible
-
-# Frontend Architecture and Technical Reference
-
-## 🏗️ Overview
-
-The frontend of the Bill Tracker application is built using modern React patterns with TypeScript, Vite, and a component-based architecture. It integrates directly with Supabase for data management and uses a variety of tools and libraries to provide a rich, interactive user experience.
-
-## 🧰 Technical Stack
-
-### Core Libraries
-
-| Library                | Version  | Purpose                                      |
-|------------------------|----------|----------------------------------------------|
-| React                  | 18.2.0   | Component-based UI framework                 |
-| TypeScript             | 5.7.3    | Static typing and enhanced IDE integration   |
-| Vite                   | 5.2.0    | Fast build tool and development server       |
-| React Router           | 6.23.1   | Client-side routing                          |
-| Supabase JS Client     | 2.48.1   | Database access and authentication           |
-| Tailwind CSS           | 3.4.1    | Utility-first CSS framework                  |
-| Radix UI               | Various  | Accessible, unstyled UI components           |
-| OpenAI                 | 4.86.1   | AI integration for analysis and embeddings   |
-| date-fns               | 3.6.0    | Date formatting and manipulation             |
-| Lucide React           | 0.394.0  | Icon library                                 |
-| React Hook Form        | 7.51.5   | Form state management and validation         |
-| Zod                    | 3.23.8   | Schema validation                            |
-
-### Build Tools
-
-- **SWC**: Fast TypeScript/JavaScript compiler (via Vite plugin)
-- **PostCSS**: CSS transformations and Tailwind processing
-- **TypeScript**: Type checking during build
-- **Rollup**: Module bundling (via Vite)
-- **ESLint**: Code linting and style enforcement
-
-## 📊 Data Flow and State Management
-
-### Data Sources
-
-1. **Supabase Database**: Primary data source for bills and user preferences
-   - Direct access via Supabase client
-   - Real-time subscription capabilities for live updates
-   - Row-level security for data access control
-
-2. **Congress.gov API**: Secondary source for bill data
-   - Accessed through backend proxy for authentication
-   - Used for initial data population and updates
-
-3. **OpenAI API**: Used for:
-   - Bill text analysis
-   - Vector embeddings for semantic search
-   - AI-generated summaries and key points
-
-### State Management Patterns
-
-1. **Component State**: 
-   - Local component state using `useState` hook
-   - Ephemeral UI state (dropdowns, modals, form inputs)
-
-2. **Context API**:
-   - Theme context for dark/light mode
-   - Potential for authentication context
-
-3. **Database as State**:
-   - Direct Supabase queries for persistent state
-   - Bills, user preferences, saved searches
-
-4. **URL Parameters**:
-   - Storing search and filter parameters in URL
-   - Enables shareable, bookmarkable states
-
-### Data Flow Example: Bill Search and Display
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant SearchBar
-    participant BillFeed
-    participant Supabase
-    participant OpenAI
-
-    User->>SearchBar: Enters search query
-    SearchBar->>OpenAI: Generate embedding
-    OpenAI-->>SearchBar: Return vector embedding
-    SearchBar->>Supabase: Query 'search_bills_by_embedding'
-    Supabase-->>BillFeed: Return bill matches
-    BillFeed->>User: Display matched bills
-    User->>BillFeed: Clicks on bill
-    BillFeed->>Supabase: Fetch full bill details
-    Supabase-->>User: Display detailed bill view
-```
-
-## 🧩 Component Architecture
-
-### Component Hierarchy
-
-```
-App
-├── ThemeProvider
-│   └── RouterProvider
-│       ├── Home
-│       │   ├── Header
-│       │   │   ├── ThemeToggle
-│       │   │   └── Navigation
-│       │   └── BillFeed
-│       │       ├── SearchBar
-│       │       ├── Filters
-│       │       ├── BillList
-│       │       │   └── BillCard (multiple)
-│       │       └── BillDialog
-│       │           ├── BillHeader
-│       │           ├── BillContent
-│       │           │   ├── TextTab
-│       │           │   ├── AnalysisTab
-│       │           │   └── StatusTab
-│       │           └── BillFooter
-│       └── TestDashboard (dev only)
-```
-
-### Key Component Details
-
-1. **BillFeed (`/src/components/BillFeed.tsx`)**
-   - **Purpose**: Central component for displaying and filtering bills
-   - **State**: 
-     - Current filter settings
-     - Search query
-     - Pagination state
-     - Selected bill for detailed view
-   - **Props**: 
-     - `onBillClick`: Handler for bill selection
-     - `searchQuery`: Current search term
-     - `filters`: Active filters object
-   - **Data Flow**: 
-     - Fetches bills from Supabase based on filters
-     - Uses intersection observer for infinite scrolling
-     - Passes bill data to child components
-
-2. **BillDialog (`/src/components/BillDialog.tsx`)**
-   - **Purpose**: Detailed view of a selected bill
-   - **State**:
-     - Active tab (text, analysis, status)
-     - PDF loading state
-     - Analysis loading state
-   - **Props**:
-     - `bill`: Full bill object with all details
-     - `onClose`: Handler for closing dialog
-   - **Features**:
-     - Tabbed interface for different content views
-     - PDF viewer for bill documents
-     - Status timeline visualization
-     - AI-generated analysis display
-
-3. **SearchBar (`/src/components/SearchBar.tsx`)**
-   - **Purpose**: Search interface for finding bills
-   - **State**:
-     - Current query
-     - Search mode (text or semantic)
-     - Suggestion list
-   - **Props**:
-     - `onSearch`: Handler for search submission
-     - `placeholder`: Custom placeholder text
-   - **Features**:
-     - Text-based search
-     - Vector semantic search
-     - Autosuggestions
-     - Search history
-
-## 🔄 API Integration
-
-### Supabase Integration
-
-```typescript
-// src/lib/supabase.ts
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/supabase";
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
-```
-
-### API Function Examples
-
-1. **Fetching Bills**:
-```typescript
-// From src/lib/api.ts
-export async function fetchBills(options: {
-  limit?: number;
-  offset?: number;
-  searchQuery?: string;
-  filters?: BillFilters;
-}): Promise<{ data: Bill[]; count: number }> {
-  const { limit = 10, offset = 0, searchQuery, filters } = options;
-  
-  let query = supabase
-    .from('bills')
-    .select('*', { count: 'exact' });
-    
-  // Apply filters and search conditions
-  if (searchQuery) {
-    query = query.ilike('title', `%${searchQuery}%`);
-  }
-  
-  if (filters?.status !== 'all') {
-    query = query.eq('status', filters.status);
-  }
-  
-  // Apply pagination
-  const { data, error, count } = await query
-    .order('introduction_date', { ascending: false })
-    .range(offset, offset + limit - 1);
-    
-  if (error) throw new Error(error.message);
-  
-  return { data: data || [], count: count || 0 };
-}
-```
-
-2. **Vector Search**:
-```typescript
-// From src/lib/api.ts
-export async function searchBillsByVector(embedding: number[], threshold: number, limit: number): Promise<Bill[]> {
-  const { data, error } = await supabase.rpc('search_bills_by_embedding', {
-    input_embedding: embedding,
-    input_match_threshold: threshold,
-    input_match_count: limit
-  });
-  
-  if (error) throw new Error(error.message);
-  
-  return data || [];
-}
-```
-
-3. **PDF Proxy**:
-```typescript
-// From src/lib/api.ts
-export async function proxyPdf(url: string): Promise<Response> {
-  const proxyEndpoint = `${API_URL}/proxy/pdf`;
-  const encodedUrl = encodeURIComponent(url);
-  const proxyUrl = `${proxyEndpoint}?url=${encodedUrl}`;
-  
-  const response = await fetch(proxyUrl, {
-    mode: 'cors',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/pdf,application/octet-stream,*/*'
-    }
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to proxy PDF');
-  }
-  
-  return response;
-}
-```
-
-## 🛠️ Build and Development Process
-
-### Environment Configuration
-
-The application uses a sophisticated environment configuration system:
-
-```
-.env                    # Base environment variables
-.env.staging            # Staging-specific variables
-.env.staging.proxy      # Staging with API proxy
-.env.production         # Production-specific variables
-.env.production.proxy   # Production with API proxy
-```
-
-The build process uses these environment files based on the specified mode:
-
-```typescript
-// vite.config.ts
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-  
-  return {
-    base: mode === "development" || mode === "staging" ? "/" : env.VITE_BASE_PATH || "/",
-    define: {
-      'process.env.NODE_ENV': mode.includes('production') ? '"production"' : '"development"',
-      'import.meta.env': JSON.stringify({
-        ...env,
-        MODE: mode,
-        DEV: mode !== 'production',
-        PROD: mode === 'production',
-      })
-    },
-    // Additional configuration...
-  };
-});
-```
-
-### Build Optimization
-
-1. **Code Splitting**:
-```javascript
-// vite.config.ts
-build: {
-  chunkSizeWarningLimit: 1000,
-  rollupOptions: {
-    output: {
-      manualChunks: {
-        'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-        'ui-vendor': [
-          '@radix-ui/react-accordion',
-          '@radix-ui/react-alert-dialog',
-          '@radix-ui/react-avatar',
-          // Additional UI components...
-        ],
-      },
-    },
-  },
-}
-```
-
-2. **TypeScript Optimization**:
-```json
-// tsconfig.json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
-}
-```
-
-### Deployment Configuration
-
-1. **Docker Setup**:
-```dockerfile
-# Dockerfile
-FROM node:18-alpine AS builder
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build:production.proxy
-
-FROM nginx:alpine
-
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY --from=builder /app/src/server/dist /app/server
-COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-2. **NGINX Configuration**:
-```nginx
-# nginx.conf
-server {
-  listen 80;
-  
-  location / {
-    root /usr/share/nginx/html;
-    index index.html;
-    try_files $uri $uri/ /index.html;
-  }
-  
-  location /proxy/ {
-    proxy_pass http://localhost:3001/;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection 'upgrade';
-    proxy_set_header Host $host;
-    proxy_cache_bypass $http_upgrade;
-  }
-}
-```
-
-## 🧪 Development Practices
-
-### Component Design Principles
-
-1. **Composition over Inheritance**:
-   - Building UIs through component composition
-   - Using smaller, focused components that can be combined
-
-2. **Props for Configuration**:
-   - Using props to customize component behavior
-   - Avoiding direct state coupling between components
-
-3. **Custom Hooks for Logic Reuse**:
-   - Extracting complex logic into custom hooks
-   - Examples include state management, API calls, and effect logic
-
-### Code Structure Conventions
-
-1. **File Organization**:
-   - Components in `/src/components`
-   - Utilities in `/src/lib`
-   - Pages in `/src/pages`
-   - Types in `/src/types`
-
-2. **Naming Conventions**:
-   - PascalCase for React components
-   - camelCase for functions and variables
-   - UPPERCASE for constants
-   - kebab-case for file names (except components)
-
-3. **Import Order**:
-   - React and core libraries first
-   - Third-party libraries next
-   - Local modules last, sorted by path depth
-
-### Performance Considerations
-
-1. **Memoization**:
-   - Using `useMemo` for expensive calculations
-   - Using `useCallback` for stable function references
-   - Using `React.memo` for pure components that render often
-
-2. **Code Splitting**:
-   - Using dynamic imports for route-based code splitting
-   - Separate vendor chunks for third-party libraries
-
-3. **Rendering Optimization**:
-   - Virtualization for long lists (via intersection observer)
-   - Debounced inputs for search functionality
-   - Pagination for large data sets
