@@ -1,0 +1,86 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+!node_modules/.vite
+
+**/tempobook/dynamic/
+**/tempobook/storyboards/
+
+core
+
+# Environment variables
+.env
+.env.production
+.env.production.proxy
+.env.staging
+.env.staging.proxy
+
+# Terraform variables
+production.tfvars
+staging.tfvars
+**/auto-sync/terraform/*.tfvars
+**/*.tfvars.json
+
+# API keys and secrets
+*.pem
+*.key
+*_key
+*_secret
+*.secret
+
+# Credentials
+credentials.json
+*credentials*
+*secret*
+*apikey*
+*api_key*
+*token*
+
+# Local development
+*.log
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Local terraform files
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+.terraformrc
+terraform.rc
+
+# Terraform files
+*.tfstate
+*.tfstate.*
+*.tfvars
