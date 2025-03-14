@@ -1,0 +1,8 @@
+project_id          = "your_project_id"
+region             = "your_region"
+zone               = "your_zone"
+environment        = "staging"
+source_supabase_url = "https://your-staging-supabase-url.supabase.co"
+source_supabase_key = "your_staging_supabase_key"
+congress_api_key   = "your_congress_api_key"
+schedule           = "0 13 * * *" # Daily at 1 PM UTC 

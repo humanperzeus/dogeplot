@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .glass-panel {
+    @apply bg-zinc-900/70 backdrop-blur-md border border-zinc-800/50 transition-all;
+  }
+
+  .glass-panel:hover {
+    @apply bg-zinc-900/80;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-light via-accent to-primary-dark bg-clip-text text-transparent;
+  }
+
+  .drop-shadow-glow {
+    filter: drop-shadow(0 0 8px rgba(var(--primary-light-rgb), 0.3));
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .glass-button {
+    @apply px-3 py-1 glass-panel hover:bg-opacity-50 rounded-full flex items-center space-x-2 transition-all;
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --primary-light: 171 77% 64%;
+    --primary-light-rgb: 100, 243, 255;
+    --primary-dark: 187 75% 64%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 280 65% 60%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 230 20% 11%;
+    --foreground: 210 40% 98%;
+
+    --card: 230 20% 13%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 230 20% 13%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 230 20% 15%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 230 20% 15%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 230 20% 15%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 230 20% 15%;
+    --input: 230 20% 15%;
+    --ring: 230 20% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 via-orange-500 to-red-600;
+  }
+}

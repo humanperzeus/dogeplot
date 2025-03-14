@@ -1,0 +1,15 @@
+{
+  "project": {
+    "id": "dogeplotfun",
+    "name": "DOGEPLOT",
+    "description": "Department of Government Efficiency - Policy Lens of Truth",
+    "region": "asia-southeast1"
+  },
+  "deployment": {
+    "registry": "gcr.io",
+    "services": {
+      "staging": "staging-dogeplot",
+      "production": "dogeplot"
+    }
+  }
+}
