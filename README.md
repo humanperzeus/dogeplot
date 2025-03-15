@@ -12,7 +12,7 @@ DOGEPLOT is a modern, AI-powered web application that tracks and analyzes congre
 
 DOGEPLOT is built with React, TypeScript, and Vite, and uses Supabase for the backend database. It leverages AI models to provide deeper insights into legislative content.
 
-![DOGEPLOT Screenshot](https://placeholder-for-screenshot.png)
+![DOGEPLOT Screenshot]([(https://github.com/humanperzeus/dogeplot/blob/main/public/doge-icon.png)])
 
 ## ✨ Key Features
 
